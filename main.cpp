@@ -12,11 +12,9 @@ int L = -1;
 int K = -1;
 using namespace std;
 
-vector<pair<int, int>> read_park(char **park);
+vector<pair<int, int>> read_park(char **park, set<pair<int, int>> &crossings);
 
-void print_park(char *const *park);
-
-bool place_citizens(int l, char **park, vector<pair<int, int>> set);
+bool place_citizens(int l, char **park, const vector<pair<int, int>> &points, set<pair<int, int>> crossings);
 
 bool can_be_placed(int row, int col, int l, char **park, set<pair<int, int>> marked);
 
@@ -28,27 +26,24 @@ bool can_move_horizontal(int row, int c, char **park);
 
 bool can_move_vertical(int row, int c, char **park);
 
-void flush() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
 
 int main() {
     scanf("%i", &W);
     scanf("%i", &H);
     scanf("%i", &L);
     scanf("%i", &K);
-    flush();
 
-    char str[250];
-    scanf("%249[^\n]", str);
+    char str[2500];
+    scanf("%2499[^\n]", str);
     string map_name = str;
-    flush();
 
     char **park = new char *[H];
-    vector<pair<int, int>> path_points = read_park(park);
-    place_citizens(L, park, path_points);
-
+    set<pair<int, int>> crossings;
+    vector<pair<int, int>> path_points = read_park(park, crossings);
+    bool res = place_citizens(L, park, path_points, crossings);
+    if (res) {
+//        cout << "SUCCESS" << endl;
+    }
     return 0;
 }
 
@@ -68,46 +63,43 @@ bool can_move_vertical(int row, int c, char **park) {
     return park[row][c] == '+' || park[row][c] == '|';
 }
 
-bool place_citizens(int l, char **park, vector<pair<int, int>> points) {
-    set<pair<int, int>> last_marked;
-    for (auto point: points) {
-        set<pair<int, int>> marked;
-        set<pair<int, int>> crossings;
-        marked.insert(point);
-        for (int i = 0; i < H; i++) {
-            for (int j = 0; j < W; j++) {
-                if (park[i][j] == '.') {
-                    continue;
-                }
-                if (park[i][j] == '+') {
-                    crossings.insert(make_pair(i, j));
-                    continue;
-                }
-                bool is_available = can_be_placed(i, j, l, park, marked);
-                if (is_available) {
-                    marked.insert(make_pair(i, j));
-                }
-                if (marked.size() >= K) {
-                    print_solution(marked);
-                    return true;
-                }
+bool place_citizens(int l, char **park, const vector<pair<int, int>> &points, set<pair<int, int>> crossings) {
+//    set<pair<int, int>> last_marked;
+//    for (auto point: points) {
+    set<pair<int, int>> marked;
+//    marked.insert(point);
+    for (int i = 0; i < H; i++) {
+        for (int j = 0; j < W; j++) {
+            if (park[i][j] == '.') {
+                continue;
             }
-        }
-
-        for (auto p : crossings) {
-            if (can_be_placed(p.first, p.second, l, park, marked)) {
+            pair<int, int> p = make_pair(i, j);
+            if (crossings.find(p) != crossings.end()) {
+                continue;
+            }
+            bool is_available = can_be_placed(i, j, l, park, marked);
+            if (is_available) {
                 marked.insert(p);
             }
+            if (marked.size() >= K) {
+                print_solution(marked);
+                return true;
+            }
         }
-        if (marked.size() >= K) {
-            print_solution(marked);
-            return true;
-        }
-        last_marked = marked;
     }
 
-    print_solution(last_marked);
+    for (auto p : crossings) {
+        if (can_be_placed(p.first, p.second, l, park, marked)) {
+            marked.insert(p);
+        }
+    }
+    if (marked.size() >= K) {
+        print_solution(marked);
+        return true;
+    }
+//    }
 
+    print_solution(marked);
     return false;
 }
 
@@ -132,8 +124,9 @@ void print_park(char *const *park) {
     }
 }
 
-vector<pair<int, int>> read_park(char **park) {
+vector<pair<int, int>> read_park(char **park, set<pair<int, int>> &crossings) {
     vector<pair<int, int>> paths_points;
+    set<pair<int, int>> tmp;
     for (int i = 0; i < H; i++) {
         park[i] = new char[W];
     }
@@ -143,9 +136,31 @@ vector<pair<int, int>> read_park(char **park) {
             if (is_path(i, j, park)) {
                 paths_points.emplace_back(make_pair(i, j));
             }
+            if (park[i][j] == '+') {
+                tmp.insert(make_pair(i, j));
+            }
         }
     }
-    flush();
+    for (auto c: tmp) {
+        int row = c.first;
+        int col = c.second;
+        int counter = 0;
+        int shift[] = {-1, 1};
+        for (int i : shift) {
+            int shifted_row = row + i;
+            int shifted_col = col + i;
+            if (is_in_park(shifted_row, col) && park[shifted_row][col] == '|') {
+                ++counter;
+            }
+            if (is_in_park(row, shifted_col) && park[row][shifted_col] == '-') {
+                ++counter;
+            }
+        }
+        if (counter > 2) {
+            crossings.insert(c);
+        }
+
+    }
     return paths_points;
 }
 
