@@ -14,11 +14,12 @@ using namespace std;
 
 vector<pair<int, int>> read_park(char **park, set<pair<int, int>> &crossings);
 
+void print_park(char *const *park);
+
 bool place_citizens(int l, char **park, const vector<pair<int, int>> &points, set<pair<int, int>> crossings);
 
 bool can_be_placed(int row, int col, int l, char **park, set<pair<int, int>> marked);
 
-void subset(vector<pair<int, int>> arr, int size, int left, int index, list<pair<int, int>> &l, char **park);
 
 void print_solution(const set<pair<int, int>> marked);
 
@@ -26,23 +27,30 @@ bool can_move_horizontal(int row, int c, char **park);
 
 bool can_move_vertical(int row, int c, char **park);
 
+void flush() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
 
 int main() {
     scanf("%i", &W);
     scanf("%i", &H);
     scanf("%i", &L);
     scanf("%i", &K);
+    flush();
 
     char str[2500];
     scanf("%2499[^\n]", str);
     string map_name = str;
+    flush();
 
     char **park = new char *[H];
     set<pair<int, int>> crossings;
     vector<pair<int, int>> path_points = read_park(park, crossings);
+//    print_park(park);
     bool res = place_citizens(L, park, path_points, crossings);
     if (res) {
-//        cout << "SUCCESS" << endl;
+        cout << "SUCCESS" << endl;
     }
     return 0;
 }
@@ -67,7 +75,14 @@ bool place_citizens(int l, char **park, const vector<pair<int, int>> &points, se
 //    set<pair<int, int>> last_marked;
 //    for (auto point: points) {
     set<pair<int, int>> marked;
+    cout << crossings.size() << endl;
 //    marked.insert(point);
+    for (auto p: points) {
+        cout << "ENDPOINTS: " << p.first << " " << p.second << endl;
+        if (can_be_placed(p.first, p.second, l, park, marked)) {
+            marked.insert(p);
+        }
+    }
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++) {
             if (park[i][j] == '.') {
@@ -78,6 +93,7 @@ bool place_citizens(int l, char **park, const vector<pair<int, int>> &points, se
                 continue;
             }
             bool is_available = can_be_placed(i, j, l, park, marked);
+
             if (is_available) {
                 marked.insert(p);
             }
@@ -125,8 +141,10 @@ void print_park(char *const *park) {
 }
 
 vector<pair<int, int>> read_park(char **park, set<pair<int, int>> &crossings) {
-    vector<pair<int, int>> paths_points;
+    vector<pair<int, int>> tmp_points;
     set<pair<int, int>> tmp;
+    int shift[] = {-1, 1};
+
     for (int i = 0; i < H; i++) {
         park[i] = new char[W];
     }
@@ -134,34 +152,64 @@ vector<pair<int, int>> read_park(char **park, set<pair<int, int>> &crossings) {
         for (int j = 0; j < W; j++) {
             cin >> park[i][j];
             if (is_path(i, j, park)) {
-                paths_points.emplace_back(make_pair(i, j));
+                tmp_points.emplace_back(make_pair(i, j));
             }
             if (park[i][j] == '+') {
                 tmp.insert(make_pair(i, j));
             }
         }
     }
+    flush();
     for (auto c: tmp) {
         int row = c.first;
         int col = c.second;
         int counter = 0;
-        int shift[] = {-1, 1};
         for (int i : shift) {
             int shifted_row = row + i;
             int shifted_col = col + i;
-            if (is_in_park(shifted_row, col) && park[shifted_row][col] == '|') {
+            if (is_in_park(shifted_row, col) && (park[shifted_row][col] == '|' || park[shifted_row][col] == '+')) {
                 ++counter;
             }
-            if (is_in_park(row, shifted_col) && park[row][shifted_col] == '-') {
+            if (is_in_park(row, shifted_col) && (park[row][shifted_col] == '-' || park[row][shifted_col] == '+')) {
                 ++counter;
             }
         }
-        if (counter > 2) {
+        if (counter >= 2) {
             crossings.insert(c);
         }
 
     }
-    return paths_points;
+
+    vector<pair<int, int>> paths_points;
+    for (auto p: tmp_points) {
+        int row = p.first;
+        int col = p.second;
+        if (park[row][col] == '|') {
+            if (!is_in_park(row + 1, col) or !is_in_park(row - 1, col) or !is_path(row + 1, col, park) or
+                !is_path(row - 1, col, park)) {
+                paths_points.emplace_back(p);
+            } else if (is_in_park(row + 1, col) && park[row + 1][col] == '-') {
+                paths_points.emplace_back(p);
+            } else if (is_in_park(row - 1, col) && park[row - 1][col] == '-') {
+                paths_points.emplace_back(p);
+            }
+        }
+        if (park[row][col] == '-') {
+            if (!is_in_park(row, col + 1) or !is_in_park(row, col - 1) or !is_path(row, col + 1, park) or
+                !is_path(row, col - 1, park)) {
+                paths_points.emplace_back(p);
+            } else if (is_in_park(row, col + 1) && park[row][col + 1] == '|') {
+                paths_points.emplace_back(p);
+            } else if (is_in_park(row, col - 1) && park[row][col - 1] == '|') {
+                paths_points.emplace_back(p);
+            }
+        }
+
+
+    }
+
+
+    return tmp_points;
 }
 
 bool can_be_placed(int row, int col, int l, char **park, set<pair<int, int>> marked) {
