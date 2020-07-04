@@ -155,14 +155,33 @@ bool place_citizens(Graph graph) {
     set<pair<int, int>> marked;
     while (!graph.extendedGraph.empty()) {
         int min = W * H * 2;
-        pair<int, int> optimal;
+        vector<pair<int, int>> optimals;
         for (const pair<const pair<int, int>, Graph::V> &node: graph.extendedGraph) {
             int size = node.second.size();
             if (min > size) {
                 min = size;
-                optimal = node.first;
             }
         }
+        for (const pair<const pair<int, int>, Graph::V> &node: graph.extendedGraph) {
+            int size = node.second.size();
+            if (min == size) {
+                optimals.emplace_back(node.first);
+            }
+        }
+        // pick the vertex that its extended neighbours have maximum
+        int max = -1;
+        pair<int, int> optimal;
+        for (pair<int, int> c: optimals) {
+            int sum = 0;
+            for (pair<int, int> n: graph.extendedGraph[c]) {
+                sum += graph.extendedGraph[n].size();
+            }
+            if (max < sum) {
+                max = sum;
+                optimal = c;
+            }
+        }
+
         marked.insert(optimal);
         Graph::V neighs = graph.extendedGraph[optimal];
         for (pair<int, int> neighbour: neighs) {
