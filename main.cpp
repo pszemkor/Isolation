@@ -6,8 +6,9 @@
 #include <set>
 #include<list>
 
-// graph representation based on:
+//graph representation and some other ideas are based on:
 //https://www-users.mat.umk.pl/~stencel/acm/algorytmika_praktyczna.pdf
+
 int W = -1;
 int H = -1;
 int L = -1;
@@ -61,6 +62,8 @@ private:
             g.insert(make_pair(e, v));
         }
     }
+
+
 };
 
 
@@ -68,9 +71,9 @@ char **read_park();
 
 void print_park(char *const *park);
 
-set<pair<int, int>> place_citizens(Graph park);
+bool place_citizens(Graph park);
 
-void print_solution(const set<pair<int, int>> &marked);
+void print_solution(const set<pair<int, int>> marked);
 
 bool can_move_horizontal(int row, int c, char **park);
 
@@ -79,6 +82,7 @@ bool can_move_vertical(int row, int c, char **park);
 void count_fields(int row, int col, char **park, set<pair<int, int>> &extended_neighbours);
 
 set<pair<int, int>> get_neighbours(int row, int col, char **park);
+
 
 Graph build_graph(char **park);
 
@@ -100,11 +104,10 @@ int main() {
     char **park = read_park();
 //    print_park(park);
     Graph g = build_graph(park);
-    set<pair<int, int>> selected = place_citizens(g);
-    if (selected.size() == K) {
-        print_solution(selected);
+    bool res = place_citizens(g);
+    if (res) {
+//        cout << "SUCCESS" << endl;
     }
-
     return 0;
 }
 
@@ -123,9 +126,6 @@ Graph build_graph(char **park) {
             for (pair<int, int> node: neigh) {
                 g.addEdge(current, node);
             }
-            /*
-             Extended edges are responsible for storing nodes that are L
-             */
             for (pair<int, int> node: extended) {
                 g.addExtendedEdge(current, node);
             }
@@ -151,7 +151,7 @@ bool can_move_vertical(int row, int c, char **park) {
     return park[row][c] == '+' || park[row][c] == '|';
 }
 
-set<pair<int, int>> place_citizens(Graph graph) {
+bool place_citizens(Graph graph) {
     set<pair<int, int>> marked;
     while (!graph.extendedGraph.empty()) {
         int min = W * H * 2;
@@ -164,7 +164,6 @@ set<pair<int, int>> place_citizens(Graph graph) {
             }
         }
         marked.insert(optimal);
-        //drop nodes that cannot be used in further processing
         Graph::V neighs = graph.extendedGraph[optimal];
         for (pair<int, int> neighbour: neighs) {
             // neighbours of optimal's neighbour
@@ -177,10 +176,15 @@ set<pair<int, int>> place_citizens(Graph graph) {
         graph.removeFromExtendedGraph(optimal);
     }
 
-    return marked;
+
+    if (marked.size() >= K) {
+        print_solution(marked);
+        return true;
+    }
+    return false;
 }
 
-void print_solution(const set<pair<int, int>> &marked) {
+void print_solution(const set<pair<int, int>> marked) {
     int so_far = 0;
     for (auto p : marked) {
         printf("%d %d\n", p.second, p.first);
@@ -213,8 +217,8 @@ void count_fields(int row, int col, char **park, set<pair<int, int>> &extended_n
         row = current.first;
         int shift[] = {-1, 1};
         if (park[row][col] == '-') {
-            for (int i = 0; i < 2; i++) {
-                int c_c = col + shift[i];
+            for (int i : shift) {
+                int c_c = col + i;
                 pair<int, int> neighbour = make_pair(row, c_c);
                 if (is_in_park(row, c_c) && is_path(row, c_c, park) && visited.find(neighbour) == visited.end() &&
                     can_move_horizontal(row, c_c, park)) {
@@ -225,8 +229,8 @@ void count_fields(int row, int col, char **park, set<pair<int, int>> &extended_n
                 }
             }
         } else if (park[row][col] == '|') {
-            for (int i = 0; i < 2; i++) {
-                int c_r = row + shift[i];
+            for (int i : shift) {
+                int c_r = row + i;
                 pair<int, int> neighbour = make_pair(c_r, col);
                 if (is_in_park(c_r, col) && is_path(c_r, col, park) && visited.find(neighbour) == visited.end() &&
                     can_move_vertical(c_r, col, park)) {
@@ -312,6 +316,7 @@ char **read_park() {
     flush();
     return park;
 }
+
 
 void print_park(char *const *park) {
     for (int i = 0; i < H; i++) {
